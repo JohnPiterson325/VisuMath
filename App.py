@@ -84,7 +84,8 @@ if st.button("🎬 Gerar Animação do Método", type="primary"):
                 line_func, = ax.plot(x_vals, y_vals, label=f"f(x) = {funcao_str}", color="#1f77b4", linewidth=2)
                 ax.axhline(0, color='black', linewidth=1, linestyle='--')
                 
-                fill_interval = ax.axvspan(a_orig, b_orig, color='orange', alpha=0.2, label="Intervalo [a, b]")
+                # Usando lista para armazenar o objeto do preenchimento de forma mutável
+                fill_container = [ax.axvspan(a_orig, b_orig, color='orange', alpha=0.2, label="Intervalo [a, b]")]
                 line_a = ax.axvline(a_orig, color='red', linestyle='--', linewidth=1.5, label="a")
                 line_b = ax.axvline(b_orig, color='blue', linestyle='--', linewidth=1.5, label="b")
                 point_c, = ax.plot([], [], 'go', markersize=8, label="Ponto médio (c)")
@@ -103,13 +104,12 @@ if st.button("🎬 Gerar Animação do Método", type="primary"):
                     line_b.set_xdata([d['b'], d['b']])
                     point_c.set_data([d['c']], [d['fc']])
                     
-                    # Atualiza a área sombreada do intervalo atual
-                    nonlocal fill_interval
-                    fill_interval.remove()
-                    fill_interval = ax.axvspan(d['a'], d['b'], color='orange', alpha=0.25)
+                    # Remove o preenchimento antigo e desenha o novo intervalo atualizado
+                    fill_container[0].remove()
+                    fill_container[0] = ax.axvspan(d['a'], d['b'], color='orange', alpha=0.25)
                     
                     ax.set_title(f"Iteração {d['iter']}: Intervalo = [{d['a']:.4f}, {d['b']:.4f}] | c = {d['c']:.4f}", fontsize=11, fontweight='bold')
-                    return line_a, line_b, point_c, fill_interval
+                    return line_a, line_b, point_c, fill_container[0]
 
                 # Criando a animação com Matplotlib
                 ani = animation.FuncAnimation(
