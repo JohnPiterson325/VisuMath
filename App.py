@@ -5,6 +5,7 @@ import matplotlib.animation as animation
 import sympy as sp
 import tempfile
 import pandas as pd
+import os
 
 # ---------------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -55,9 +56,14 @@ def check_domain_issues(f, a, b):
 # BARRA LATERAL (1/4 DA TELA)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.header("Configurações VisuMath")
+    # 1. LOGO VISUMATH
+    logo_path = "Logo VisuMath_ Matemática Visual.png"
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
     
-    if st.button("Restaurar Padrões", use_container_width=True):
+    st.header("⚙️ Configurações VisuMath")
+    
+    if st.button("🔄 Restaurar Padrões", use_container_width=True):
         st.session_state["func_input"] = "x**2 - 2"
         st.session_state["a_input"] = 1.0
         st.session_state["b_input"] = 2.0
@@ -68,7 +74,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.subheader("Exemplos Rápidos (Clique)")
+    st.subheader("🚀 Exemplos Rápidos (1-Clique)")
     
     col_ex1, col_ex2 = st.columns(2)
     with col_ex1:
@@ -96,7 +102,7 @@ with st.sidebar:
             st.session_state["b_input"] = 1.5
 
     st.markdown("---")
-    st.subheader("Parâmetros de Entrada")
+    st.subheader("📥 Parâmetros de Entrada")
     
     func_str = st.text_input(
         "Função f(x):", 
@@ -138,20 +144,23 @@ with st.sidebar:
         
     viz_mode = st.radio(
         "Modo de Visualização:",
-        options=["Slider Interativo", "Animação em GIF"],
+        options=["Slider Interativo (Estilo Colab)", "Animação em GIF"],
         key="viz_mode"
     )
     
+    # Definição segura do FPS para evitar NameError
     if viz_mode == "Animação em GIF":
         fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
+    else:
+        fps_val = 2
 
-    btn_calcular = st.button("CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
+    btn_calcular = st.button("🚀 CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------
 # ÁREA PRINCIPAL (3/4 DA TELA)
 # ---------------------------------------------------------
 if not btn_calcular and "calculated" not in st.session_state:
-    st.markdown('<div class="main-title"> VisuMath - Método da Bisseção</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">VisuMath - Método da Bisseção</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Plataforma Interativa para Análise Numérica e Visualização do Teorema de Bolzano</div>', unsafe_allow_html=True)
     
     col_info1, col_info2 = st.columns(2)
@@ -171,7 +180,9 @@ if not btn_calcular and "calculated" not in st.session_state:
         """)
         
     st.markdown("---")
-    with st.expander("### O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
+    
+    # Expander ajustado com título em destaque sem ### brutos
+    with st.expander("O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
         st.markdown("""
         Se uma função real $f(x)$ for contínua em $[a, b]$ e $f(a) \cdot f(b) < 0$, existe pelo menos um $c \in (a, b)$ tal que $f(c) = 0$.
         """)
@@ -236,34 +247,27 @@ else:
         ca, cb, cc = data["a"], data["b"], data["c"]
         cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
         
-        # Domínio adaptativo suave ao redor do intervalo ativo
         span = max(abs(cb - ca), 0.1)
         x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 500)
         y_vals = f(x_vals)
         
-        # Curva principal
         ax.plot(x_vals, y_vals, color="#1E3A8A", lw=2.5, label="$f(x)$")
         ax.axhline(0, color="black", lw=1.2, ls="--", alpha=0.7)
         
-        # Preenchimento translúcido da área de busca ativa [a, b]
         ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo de Busca $[a, b]$")
         
-        # Linhas verticais limpas
         ax.axvline(ca, color="#EF4444", ls=":", lw=1.8, label=f"a = {fmt(ca, 4)}")
         ax.axvline(cb, color="#8B5CF6", ls=":", lw=1.8, label=f"b = {fmt(cb, 4)}")
         ax.axvline(cc, color="#0EA5E9", ls="--", lw=2, label=f"c (Ponto Médio) = {fmt(cc, 4)}")
         
-        # Pontos exatos sobre a curva
         ax.plot(ca, cfa, 'o', color="#EF4444", markersize=8)
         ax.plot(cb, cfb, 'o', color="#8B5CF6", markersize=8)
         ax.plot(cc, cfc, 'o', color="#0EA5E9", markersize=10, zorder=5)
         
-        # Anotações de texto no gráfico
         ax.annotate(f"f(a) {'(+)' if cfa>0 else '(-)'}", (ca, cfa), textcoords="offset points", xytext=(-15, 10), ha='center', fontweight='bold', color="#EF4444")
         ax.annotate(f"f(b) {'(+)' if cfb>0 else '(-)'}", (cb, cfb), textcoords="offset points", xytext=(15, 10), ha='center', fontweight='bold', color="#8B5CF6")
         ax.annotate(f"f(c) {'(+)' if cfc>0 else '(-)'}", (cc, cfc), textcoords="offset points", xytext=(0, 15), ha='center', fontweight='bold', color="#0EA5E9")
 
-        # HUD flutuante interno estilo painel de laboratório
         hud = (
             f"Passo: {data['k']} | Intervalo: [{fmt(ca, 4)}, {fmt(cb, 4)}]\n"
             f"c = {fmt(cc, 5)} | f(c) = {fmt(cfc, 6)}\n"
@@ -287,7 +291,6 @@ else:
             fig, ax = plt.subplots(figsize=(10, 5))
             def update(i):
                 ax.clear()
-                # Reutiliza a lógica de frame para o gif
                 data = iterations_data[i]
                 ca, cb, cc = data["a"], data["b"], data["c"]
                 cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
@@ -310,7 +313,7 @@ else:
             plt.close(fig)
 
     # ---------------------------------------------------------
-    # TABELA DE BISSEÇÕES ACUMULADA (CORRIGIDA E SEM BUGS)
+    # TABELA DE BISSEÇÕES ACUMULADA
     # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📋 Tabela de Bisseções Acumulada")
@@ -347,7 +350,7 @@ else:
     )
 
     # ---------------------------------------------------------
-    # RELATÓRIO & CONCLUSÃO FORMAL (LIMPO E SEM POLUIÇÃO)
+    # RELATÓRIO & CONCLUSÃO FORMAL
     # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📝 Relatório & Conclusão Formal")
@@ -359,7 +362,7 @@ else:
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         st.markdown(f"""
-        - **Status da Tolerância (epsilon):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}
+        - **Status da Tolerância ($\varepsilon$):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}
         - **Iterações Executadas:** **{total_steps}**
         """)
     with col_rel2:
