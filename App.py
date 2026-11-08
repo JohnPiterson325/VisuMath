@@ -150,9 +150,17 @@ with st.sidebar:
     )
     
     if viz_mode == "Animação em Vídeo":
-        fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
-
-    btn_calcular = st.button("🚀 CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
+        with st.spinner("Renderizando animação interativa..."):
+            anim = animation.FuncAnimation(fig, generate_frame, frames=len(iterations_data), fargs=(ax,), interval=1000//fps_val)
+            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmpfile:
+                anim.save(tmpfile.name, writer='pillow', fps=fps_val)
+                st.image(tmpfile.name)
+            plt.close(fig)
+    else:
+        step_selected = st.slider("Selecione a Iteração:", 1, len(iterations_data), len(iterations_data))
+        generate_frame(step_selected - 1, ax)
+        st.pyplot(fig)
+        plt.close(fig)
 
 # ---------------------------------------------------------
 # ÁREA PRINCIPAL (3/4 DA TELA)
