@@ -16,11 +16,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS limpa
+# Estilização CSS para cores e tabela acadêmica
 st.markdown("""
 <style>
     .main-title { font-size: 2.2rem; color: #1E3A8A; font-weight: bold; margin-bottom: 0px; }
     .sub-title { font-size: 1.1rem; color: #4B5563; margin-bottom: 20px; }
+    .highlight-green { background-color: #DCFCE7; color: #166534; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+    .highlight-red { background-color: #FEE2E2; color: #991B1B; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,7 +58,6 @@ def check_domain_issues(f, a, b):
 # BARRA LATERAL (1/4 DA TELA)
 # ---------------------------------------------------------
 with st.sidebar:
-    # 1. LOGO VISUMATH
     logo_path = "Logo VisuMath_ Matemática Visual.png"
     if os.path.exists(logo_path):
         st.image(logo_path, use_container_width=True)
@@ -148,7 +149,6 @@ with st.sidebar:
         key="viz_mode"
     )
     
-    # Definição segura do FPS para evitar NameError
     if viz_mode == "Animação em GIF":
         fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
     else:
@@ -180,8 +180,6 @@ if not btn_calcular and "calculated" not in st.session_state:
         """)
         
     st.markdown("---")
-    
-    # Expander ajustado com título em destaque sem ### brutos
     with st.expander("O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
         st.markdown("""
         Se uma função real $f(x)$ for contínua em $[a, b]$ e $f(a) \cdot f(b) < 0$, existe pelo menos um $c \in (a, b)$ tal que $f(c) = 0$.
@@ -210,7 +208,7 @@ else:
         st.error(f"⚠️ **Violação de Bolzano:** $f(a) \cdot f(b) \ge 0$. Os sinais nas extremidades devem ser opostos.")
         st.stop()
 
-    # Execução do Algoritmo
+    # Execução do Algoritmo de Bisseção (Lógica exata do Colab)
     iterations_data = []
     a, b = a_val, b_val
     target_tol = tol_val
@@ -237,11 +235,11 @@ else:
             a = c
 
     # ---------------------------------------------------------
-    # VISUALIZAÇÃO GRÁFICA AVANÇADA (PADRÃO COLAB)
+    # MOTOR DE RENDERIZAÇÃO GRÁFICA (EXATAMENTE COMO NO COLAB)
     # ---------------------------------------------------------
     st.markdown(f"### 📊 Análise Gráfica Dinâmica (Estilo Colab): ${sp.latex(sympy_expr)}$")
     
-    def render_colab_style_plot(idx):
+    def generate_frame(idx):
         fig, ax = plt.subplots(figsize=(10, 5))
         data = iterations_data[idx]
         ca, cb, cc = data["a"], data["b"], data["c"]
@@ -254,23 +252,31 @@ else:
         ax.plot(x_vals, y_vals, color="#1E3A8A", lw=2.5, label="$f(x)$")
         ax.axhline(0, color="black", lw=1.2, ls="--", alpha=0.7)
         
-        ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo de Busca $[a, b]$")
+        ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo de Busca Ativo $[a, b]$")
         
         ax.axvline(ca, color="#EF4444", ls=":", lw=1.8, label=f"a = {fmt(ca, 4)}")
         ax.axvline(cb, color="#8B5CF6", ls=":", lw=1.8, label=f"b = {fmt(cb, 4)}")
         ax.axvline(cc, color="#0EA5E9", ls="--", lw=2, label=f"c (Ponto Médio) = {fmt(cc, 4)}")
         
-        ax.plot(ca, cfa, 'o', color="#EF4444", markersize=8)
-        ax.plot(cb, cfb, 'o', color="#8B5CF6", markersize=8)
-        ax.plot(cc, cfc, 'o', color="#0EA5E9", markersize=10, zorder=5)
+        col_fa = 'green' if cfa > 0 else 'red'
+        col_fb = 'green' if cfb > 0 else 'red'
+        col_fc = 'green' if cfc > 0 else 'red'
         
-        ax.annotate(f"f(a) {'(+)' if cfa>0 else '(-)'}", (ca, cfa), textcoords="offset points", xytext=(-15, 10), ha='center', fontweight='bold', color="#EF4444")
-        ax.annotate(f"f(b) {'(+)' if cfb>0 else '(-)'}", (cb, cfb), textcoords="offset points", xytext=(15, 10), ha='center', fontweight='bold', color="#8B5CF6")
-        ax.annotate(f"f(c) {'(+)' if cfc>0 else '(-)'}", (cc, cfc), textcoords="offset points", xytext=(0, 15), ha='center', fontweight='bold', color="#0EA5E9")
+        sign_a = "(+)" if cfa > 0 else "(-)"
+        sign_b = "(+)" if cfb > 0 else "(-)"
+        sign_c = "(+)" if cfc > 0 else "(-)"
+        
+        ax.plot(ca, cfa, 'o', color=col_fa, markersize=8)
+        ax.plot(cb, cfb, 'o', color=col_fb, markersize=8)
+        ax.plot(cc, cfc, 'o', color=col_fc, markersize=10, zorder=5)
+        
+        ax.annotate(f"sgn(f(a)) = {sign_a}", (ca, cfa), textcoords="offset points", xytext=(-20, 10), ha='center', fontweight='bold', color=col_fa)
+        ax.annotate(f"sgn(f(b)) = {sign_b}", (cb, cfb), textcoords="offset points", xytext=(20, 10), ha='center', fontweight='bold', color=col_fb)
+        ax.annotate(f"sgn(f(c)) = {sign_c}", (cc, cfc), textcoords="offset points", xytext=(0, 15), ha='center', fontweight='bold', color=col_fc)
 
         hud = (
             f"Passo: {data['k']} | Intervalo: [{fmt(ca, 4)}, {fmt(cb, 4)}]\n"
-            f"c = {fmt(cc, 5)} | f(c) = {fmt(cfc, 6)}\n"
+            f"c = {fmt(cc, 5)} | f(c) sinal: {sign_c}\n"
             f"Amplitude (b-a) = {fmt(data['width'], 6)}"
         )
         ax.text(0.03, 0.93, hud, transform=ax.transAxes, fontsize=9, fontfamily='monospace',
@@ -283,30 +289,13 @@ else:
 
     if viz_mode == "Slider Interativo (Estilo Colab)":
         step_sel = st.slider("🔍 Deslize para acompanhar a evolução passo a passo:", 1, len(iterations_data), len(iterations_data))
-        fig_plot = render_colab_style_plot(step_sel - 1)
+        fig_plot = generate_frame(step_sel - 1)
         st.pyplot(fig_plot)
         plt.close(fig_plot)
     else:
-        with st.spinner("Gerando animação GIF..."):
+        with st.spinner("Gerando animação detalhada..."):
             fig, ax = plt.subplots(figsize=(10, 5))
-            def update(i):
-                ax.clear()
-                data = iterations_data[i]
-                ca, cb, cc = data["a"], data["b"], data["c"]
-                cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
-                span = max(abs(cb - ca), 0.1)
-                x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 400)
-                ax.plot(x_vals, f(x_vals), color="#1E3A8A", lw=2)
-                ax.axhline(0, color="black", ls="--")
-                ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15)
-                ax.axvline(ca, color="#EF4444", ls=":")
-                ax.axvline(cb, color="#8B5CF6", ls=":")
-                ax.axvline(cc, color="#0EA5E9", ls="--")
-                ax.plot(cc, cfc, 'bo', markersize=8)
-                ax.set_title(f"Iteração {data['k']}")
-                ax.grid(True, alpha=0.5)
-
-            anim = animation.FuncAnimation(fig, update, frames=len(iterations_data), interval=1000//fps_val)
+            anim = animation.FuncAnimation(fig, lambda i: generate_frame(i), frames=len(iterations_data), interval=1000//fps_val)
             with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
                 anim.save(tmp.name, writer='pillow', fps=fps_val)
                 st.image(tmp.name)
@@ -318,31 +307,60 @@ else:
     st.markdown("---")
     st.markdown("### 📋 Tabela de Bisseções Acumulada")
     
-    table_rows = []
+    table_html = """
+    <table style="width:100%; border-collapse: collapse; text-align: center; font-size: 0.9rem; font-family: sans-serif;">
+        <thead>
+            <tr style="background-color: #1E3A8A; color: white;">
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">k</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">a</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">b</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1; background-color: #0284C7;">c = (a+b)/2</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">Sinal f(a)</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">Sinal f(b)</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1; background-color: #0284C7;">Sinal f(c)</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">|b - a|</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">Critério ε</th>
+                <th style="padding: 10px; border: 1px solid #CBD5E1;">Substituição</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    
     for row in iterations_data:
         is_tol_met = row["width"] < target_tol
-        comp_str = f"{fmt(row['width'])} < {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} > {fmt(target_tol)}"
-        table_rows.append({
-            "k": row["k"],
-            "a": fmt(row["a"]),
-            "b": fmt(row["b"]),
-            "c = (a+b)/2": fmt(row["c"]),
-            "f(a)": fmt(row["fa"]),
-            "f(b)": fmt(row["fb"]),
-            "f(c)": fmt(row["fc"]),
-            "|b - a|": fmt(row["width"]),
-            "Critério ε": comp_str,
-            "Substituição": row["subst"]
-        })
-    
-    df_results = pd.DataFrame(table_rows)
-    st.dataframe(df_results, use_container_width=True, hide_index=True)
+        comp_str = f"{fmt(row['width'])} &lt; {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} &gt; {fmt(target_tol)}"
+        
+        s_fa = "(+)" if row["fa"] > 0 else "(-)"
+        s_fb = "(+)" if row["fb"] > 0 else "(-)"
+        s_fc = "(+)" if row["fc"] > 0 else "(-)"
+        
+        fa_span = f'<span class="{"highlight-green" if row["fa"] > 0 else "highlight-red"}">{s_fa}</span>'
+        fb_span = f'<span class="{"highlight-green" if row["fb"] > 0 else "highlight-red"}">{s_fb}</span>'
+        fc_span = f'<span class="{"highlight-green" if row["fc"] > 0 else "highlight-red"}">{s_fc}</span>'
+        
+        table_html += f"""
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding: 8px; border: 1px solid #CBD5E1; font-weight: bold;">{row['k']}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['a'])}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['b'])}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1; background-color: #F0F9FF; font-weight: bold;">{fmt(row['c'])}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fa_span}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fb_span}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fc_span}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['width'])}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1;">{comp_str}</td>
+            <td style="padding: 8px; border: 1px solid #CBD5E1; font-style: italic;">{row['subst']}</td>
+        </tr>
+        """
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
 
     # Indicador de Redução
     initial_width = abs(b_val - a_val)
     final_width = iterations_data[-1]["width"]
     reduction_pct = (1.0 - (final_width / initial_width)) * 100.0
     
+    st.markdown("<br>", unsafe_allow_html=True)
     st.metric(
         label="📉 Porcentagem de Redução do Intervalo Acumulada",
         value=f"{reduction_pct:.4f}%".replace(".", ","),
