@@ -171,9 +171,8 @@ if not btn_calcular and "calculated" not in st.session_state:
         """)
         
     st.markdown("---")
-    with st.expander("O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
+    with st.expander("### O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
         st.markdown("""
-        #### 
         Se uma função real $f(x)$ for contínua em $[a, b]$ e $f(a) \cdot f(b) < 0$, existe pelo menos um $c \in (a, b)$ tal que $f(c) = 0$.
         """)
 
