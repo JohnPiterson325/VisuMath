@@ -16,13 +16,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS para cores e tabela acadêmica
+# Estilização CSS limpa
 st.markdown("""
 <style>
     .main-title { font-size: 2.2rem; color: #1E3A8A; font-weight: bold; margin-bottom: 0px; }
     .sub-title { font-size: 1.1rem; color: #4B5563; margin-bottom: 20px; }
-    .highlight-green { background-color: #DCFCE7; color: #166534; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-    .highlight-red { background-color: #FEE2E2; color: #991B1B; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -208,7 +206,7 @@ else:
         st.error(f"⚠️ **Violação de Bolzano:** $f(a) \cdot f(b) \ge 0$. Os sinais nas extremidades devem ser opostos.")
         st.stop()
 
-    # Execução do Algoritmo de Bisseção (Lógica exata do Colab)
+    # Execução do Algoritmo de Bisseção
     iterations_data = []
     a, b = a_val, b_val
     target_tol = tol_val
@@ -235,12 +233,15 @@ else:
             a = c
 
     # ---------------------------------------------------------
-    # MOTOR DE RENDERIZAÇÃO GRÁFICA (EXATAMENTE COMO NO COLAB)
+    # MOTOR DE RENDERIZAÇÃO GRÁFICA (COM FUNDO BRANCO SÓLIDO)
     # ---------------------------------------------------------
     st.markdown(f"### 📊 Análise Gráfica Dinâmica (Estilo Colab): ${sp.latex(sympy_expr)}$")
     
     def generate_frame(idx):
-        fig, ax = plt.subplots(figsize=(10, 5))
+        # Força o fundo branco sólido para evitar inversões ou transparências indesejadas
+        fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
+        ax.set_facecolor('white')
+        
         data = iterations_data[idx]
         ca, cb, cc = data["a"], data["b"], data["c"]
         cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
@@ -294,66 +295,52 @@ else:
         plt.close(fig_plot)
     else:
         with st.spinner("Gerando animação detalhada..."):
-            fig, ax = plt.subplots(figsize=(10, 5))
+            fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
             anim = animation.FuncAnimation(fig, lambda i: generate_frame(i), frames=len(iterations_data), interval=1000//fps_val)
             with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
-                anim.save(tmp.name, writer='pillow', fps=fps_val)
+                anim.save(tmp.name, writer='pillow', fps=fps_val, facecolor='white', edgecolor='none')
                 st.image(tmp.name)
             plt.close(fig)
 
     # ---------------------------------------------------------
-    # TABELA DE BISSEÇÕES ACUMULADA
+    # TABELA DE BISSEÇÕES ACUMULADA (COM PANDAS STYLER - SEM BUGS)
     # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📋 Tabela de Bisseções Acumulada")
     
-    table_html = """
-    <table style="width:100%; border-collapse: collapse; text-align: center; font-size: 0.9rem; font-family: sans-serif;">
-        <thead>
-            <tr style="background-color: #1E3A8A; color: white;">
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">k</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">a</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">b</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1; background-color: #0284C7;">c = (a+b)/2</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">Sinal f(a)</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">Sinal f(b)</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1; background-color: #0284C7;">Sinal f(c)</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">|b - a|</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">Critério ε</th>
-                <th style="padding: 10px; border: 1px solid #CBD5E1;">Substituição</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-    
+    table_rows = []
     for row in iterations_data:
         is_tol_met = row["width"] < target_tol
-        comp_str = f"{fmt(row['width'])} &lt; {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} &gt; {fmt(target_tol)}"
+        comp_str = f"{fmt(row['width'])} < {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} > {fmt(target_tol)}"
         
-        s_fa = "(+)" if row["fa"] > 0 else "(-)"
-        s_fb = "(+)" if row["fb"] > 0 else "(-)"
-        s_fc = "(+)" if row["fc"] > 0 else "(-)"
-        
-        fa_span = f'<span class="{"highlight-green" if row["fa"] > 0 else "highlight-red"}">{s_fa}</span>'
-        fb_span = f'<span class="{"highlight-green" if row["fb"] > 0 else "highlight-red"}">{s_fb}</span>'
-        fc_span = f'<span class="{"highlight-green" if row["fc"] > 0 else "highlight-red"}">{s_fc}</span>'
-        
-        table_html += f"""
-        <tr style="border-bottom: 1px solid #E2E8F0;">
-            <td style="padding: 8px; border: 1px solid #CBD5E1; font-weight: bold;">{row['k']}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['a'])}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['b'])}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1; background-color: #F0F9FF; font-weight: bold;">{fmt(row['c'])}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fa_span}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fb_span}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fc_span}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{fmt(row['width'])}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1;">{comp_str}</td>
-            <td style="padding: 8px; border: 1px solid #CBD5E1; font-style: italic;">{row['subst']}</td>
-        </tr>
-        """
-    table_html += "</tbody></table>"
-    st.markdown(table_html, unsafe_allow_html=True)
+        table_rows.append({
+            "k": row["k"],
+            "a": fmt(row["a"]),
+            "b": fmt(row["b"]),
+            "c = (a+b)/2": fmt(row["c"]),
+            "Sinal f(a)": "(+)" if row["fa"] > 0 else "(-)",
+            "Sinal f(b)": "(+)" if row["fb"] > 0 else "(-)",
+            "Sinal f(c)": "(+)" if row["fc"] > 0 else "(-)",
+            "|b - a|": fmt(row["width"]),
+            "Critério ε": comp_str,
+            "Substituição": row["subst"]
+        })
+    
+    df_results = pd.DataFrame(table_rows)
+
+    # Função para colorir os sinais de forma nativa e segura no Pandas Styler
+    def color_signs(val):
+        if val == "(+)":
+            return 'background-color: #DCFCE7; color: #166534; font-weight: bold; text-align: center;'
+        elif val == "(-)":
+            return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold; text-align: center;'
+        return 'text-align: center;'
+
+    df_styled = df_results.style.applymap(
+        color_signs, subset=["Sinal f(a)", "Sinal f(b)", "Sinal f(c)"]
+    ).set_properties(**{'text-align': 'center'})
+
+    st.dataframe(df_styled, use_container_width=True, hide_index=True)
 
     # Indicador de Redução
     initial_width = abs(b_val - a_val)
