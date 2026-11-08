@@ -150,17 +150,9 @@ with st.sidebar:
     )
     
     if viz_mode == "Animação em Vídeo":
-        with st.spinner("Renderizando animação interativa..."):
-            anim = animation.FuncAnimation(fig, generate_frame, frames=len(iterations_data), fargs=(ax,), interval=1000//fps_val)
-            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmpfile:
-                anim.save(tmpfile.name, writer='pillow', fps=fps_val)
-                st.image(tmpfile.name)
-            plt.close(fig)
-    else:
-        step_selected = st.slider("Selecione a Iteração:", 1, len(iterations_data), len(iterations_data))
-        generate_frame(step_selected - 1, ax)
-        st.pyplot(fig)
-        plt.close(fig)
+        fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
+
+    btn_calcular = st.button("🚀 CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------
 # ÁREA PRINCIPAL (3/4 DA TELA)
@@ -305,6 +297,112 @@ else:
 
     if viz_mode == "Animação em Vídeo":
         with st.spinner("Renderizando animação interativa..."):
-            anim = animation.FuncAnimation(fig, generate_frame, frames=len(iterations_data), fargs=(ax,), interval=1000//fps_val)
+            anim = animation.FuncAnimation(
+                fig, 
+                generate_frame, 
+                frames=len(iterations_data), 
+                fargs=(ax,), 
+                interval=int(1000 // fps_val)
+            )
             with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmpfile:
-                anim.save(tmpfile.name
+                anim.save(tmpfile.name, writer='pillow', fps=fps_val)
+                st.image(tmpfile.name)
+            plt.close(fig)
+    else:
+        step_selected = st.slider("Selecione a Iteração:", 1, len(iterations_data), len(iterations_data))
+        generate_frame(step_selected - 1, ax)
+        st.pyplot(fig)
+        plt.close(fig)
+
+    st.markdown("---")
+    st.markdown("### 📋 Tabela de Bisseções Acumulada")
+    
+    table_html = f"""
+    <table style="width:100%; border-collapse: collapse; text-align: center; font-size: 0.9rem;">
+        <thead>
+            <tr style="background-color: #1E3A8A; color: white;">
+                <th style="padding: 8px;">k</th>
+                <th style="padding: 8px;">a</th>
+                <th style="padding: 8px;">b</th>
+                <th style="padding: 8px; background-color: #0284C7;">c = (a+b)/2</th>
+                <th style="padding: 8px;">f(a)</th>
+                <th style="padding: 8px;">f(b)</th>
+                <th style="padding: 8px; background-color: #0284C7;">f(c)</th>
+                <th style="padding: 8px;">|b - a|</th>
+                <th style="padding: 8px;">|b - a| &lt; ε ({fmt(target_tol)})</th>
+                <th style="padding: 8px;">Substituição</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    
+    for row in iterations_data:
+        is_tol_met = row["width"] < target_tol
+        tol_cmp = f"{fmt(row['width'])} &lt; {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} &gt; {fmt(target_tol)}"
+        
+        fa_color = "highlight-green" if row["fa"] > 0 else "highlight-red"
+        fb_color = "highlight-green" if row["fb"] > 0 else "highlight-red"
+        fc_color = "highlight-green" if row["fc"] > 0 else "highlight-red"
+        
+        table_html += f"""
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+            <td style="padding: 6px; font-weight: bold;">{row['k']}</td>
+            <td style="padding: 6px;">{fmt(row['a'])}</td>
+            <td style="padding: 6px;">{fmt(row['b'])}</td>
+            <td style="padding: 6px;" class="highlight-blue">{fmt(row['c'])}</td>
+            <td style="padding: 6px;" class="{fa_color}">{fmt(row['fa'])}</td>
+            <td style="padding: 6px;" class="{fb_color}">{fmt(row['fb'])}</td>
+            <td style="padding: 6px;" class="{fc_color}">{fmt(row['fc'])}</td>
+            <td style="padding: 6px;">{fmt(row['width'])}</td>
+            <td style="padding: 6px;">{tol_cmp}</td>
+            <td style="padding: 6px; font-style: italic;">{row['subst']}</td>
+        </tr>
+        """
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
+
+    initial_width = abs(b_val - a_val)
+    final_width = iterations_data[-1]["width"]
+    reduction_pct = (1.0 - (final_width / initial_width)) * 100.0
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.metric(
+        label="📉 Porcentagem de Redução do Intervalo Acumulada",
+        value=f"{reduction_pct:.4f}%".replace(".", ","),
+        delta=f"De {fmt(initial_width, 4)} para {fmt(final_width, 6)}"
+    )
+
+    st.markdown("---")
+    st.markdown("### 📝 Relatório & Conclusão Formal")
+    
+    final_c = iterations_data[-1]["c"]
+    final_fc = iterations_data[-1]["fc"]
+    total_steps = len(iterations_data)
+    
+    col_rel1, col_rel2 = st.columns(2)
+    with col_rel1:
+        st.markdown(f"""
+        **Status da Tolerância (ε):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}\n
+        **Iterações Executadas:** {total_steps} passo(s)\n
+        **Teto / Estimativa de Iterações:** 
+        - Iterações configuradas: **{max_steps}**
+        - Iterações estimadas (fórmula teórico-analítica): **{n_theoretical}**
+        """)
+    
+    with col_rel2:
+        st.markdown(f"""
+        **Raiz Aproximada ($c$):** `{fmt(final_c, 7)}`\n
+        **Valor da Função no Ponto Exato $f(c)$:** `{fmt(final_fc, 8)}`\n
+        **Amplitude Final do Intervalo:** `{fmt(final_width, 8)}`
+        """)
+        
+    if total_steps >= 20:
+        st.warning("⚠️ **Recomendação Científica:** O algoritmo ultrapassou 20 iterações. Devido à convergência linear do Método da Bisseção, recomenda-se considerar métodos de ordem superior (como Newton-Raphson ou Secante) para maior eficiência computacional.")
+
+    if mode_iter == "Manual" and final_width >= target_tol:
+        st.info(f"💡 **Nota Pedagógica:** Você limitou a execução a **{max_steps} iterações**, mas eram necessárias teoricamente **{n_theoretical} iterações** para satisfazer a tolerância de {fmt(target_tol)}. Por isso, a tolerância não foi atingida.")
+
+    st.success(f"""
+    **Conclusão Formal:**
+    Pelo Método da Bisseção, a raiz aproximada da função $f(x) = {sp.latex(sympy_expr)}$ no intervalo inicial $[{fmt(a_val)}, {fmt(b_val)}]$ é **$x \\approx {fmt(final_c, 6)}$**, obtida após **{total_steps} iterações**, garantindo um erro residual de $f(c) = {fmt(final_fc, 8)}$ e precisão de intervalo de ${fmt(final_width, 7)}$.
+    """)
