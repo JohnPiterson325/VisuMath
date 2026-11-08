@@ -55,9 +55,9 @@ def check_domain_issues(f, a, b):
 # BARRA LATERAL (1/4 DA TELA)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.header("⚙️ Configurações VisuMath")
+    st.header("Configurações VisuMath")
     
-    if st.button("🔄 Restaurar Padrões", use_container_width=True):
+    if st.button("Restaurar Padrões", use_container_width=True):
         st.session_state["func_input"] = "x**2 - 2"
         st.session_state["a_input"] = 1.0
         st.session_state["b_input"] = 2.0
@@ -68,7 +68,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.subheader("🚀 Exemplos Rápidos (1-Clique)")
+    st.subheader("Exemplos Rápidos (Clique)")
     
     col_ex1, col_ex2 = st.columns(2)
     with col_ex1:
@@ -96,7 +96,7 @@ with st.sidebar:
             st.session_state["b_input"] = 1.5
 
     st.markdown("---")
-    st.subheader("📥 Parâmetros de Entrada")
+    st.subheader("Parâmetros de Entrada")
     
     func_str = st.text_input(
         "Função f(x):", 
@@ -138,20 +138,20 @@ with st.sidebar:
         
     viz_mode = st.radio(
         "Modo de Visualização:",
-        options=["Slider Interativo (Estilo Colab)", "Animação em GIF"],
+        options=["Slider Interativo", "Animação em GIF"],
         key="viz_mode"
     )
     
     if viz_mode == "Animação em GIF":
         fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
 
-    btn_calcular = st.button("🚀 CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
+    btn_calcular = st.button("CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------
 # ÁREA PRINCIPAL (3/4 DA TELA)
 # ---------------------------------------------------------
 if not btn_calcular and "calculated" not in st.session_state:
-    st.markdown('<div class="main-title">📐 VisuMath - Método da Bisseção</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title"> VisuMath - Método da Bisseção</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Plataforma Interativa para Análise Numérica e Visualização do Teorema de Bolzano</div>', unsafe_allow_html=True)
     
     col_info1, col_info2 = st.columns(2)
@@ -171,9 +171,9 @@ if not btn_calcular and "calculated" not in st.session_state:
         """)
         
     st.markdown("---")
-    with st.expander("📖 **Fundamentação Teórica & Origem do Método**", expanded=True):
+    with st.expander("O Teorema do Valor Intermediário (Teorema de Bolzano)", expanded=True):
         st.markdown("""
-        #### O Teorema do Valor Intermediário (Teorema de Bolzano)
+        #### 
         Se uma função real $f(x)$ for contínua em $[a, b]$ e $f(a) \cdot f(b) < 0$, existe pelo menos um $c \in (a, b)$ tal que $f(c) = 0$.
         """)
 
@@ -360,7 +360,7 @@ else:
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         st.markdown(f"""
-        - **Status da Tolerância ($\varepsilon$):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}
+        - **Status da Tolerância (epsilon):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}
         - **Iterações Executadas:** **{total_steps}**
         """)
     with col_rel2:
