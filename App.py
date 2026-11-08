@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy as sp
 import tempfile
-import os
+import pandas as pd
 
 # ---------------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -15,15 +15,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS customizada para cabeçalhos e tabelas
+# Estilização CSS limpa
 st.markdown("""
 <style>
     .main-title { font-size: 2.2rem; color: #1E3A8A; font-weight: bold; margin-bottom: 0px; }
     .sub-title { font-size: 1.1rem; color: #4B5563; margin-bottom: 20px; }
-    .stTable { font-size: 0.95rem; }
-    .highlight-blue { background-color: #E0F2FE; font-weight: bold; }
-    .highlight-green { background-color: #DCFCE7; color: #166534; font-weight: bold; }
-    .highlight-red { background-color: #FEE2E2; color: #991B1B; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -39,7 +35,6 @@ def fmt(val, dec=6):
     return str(val)
 
 def parse_function(expr_str):
-    """Converte a string da função em uma função Python operável com Numpy."""
     x = sp.Symbol('x')
     expr_clean = expr_str.replace("^", "**").replace("sen", "sin")
     expr_sympy = sp.sympify(expr_clean)
@@ -47,7 +42,6 @@ def parse_function(expr_str):
     return f_num, expr_sympy
 
 def check_domain_issues(f, a, b):
-    """Verifica se há pontos fora do domínio no intervalo (ex: ln(x) para x <= 0)."""
     test_points = np.linspace(a, b, 100)
     try:
         vals = f(test_points)
@@ -63,7 +57,6 @@ def check_domain_issues(f, a, b):
 with st.sidebar:
     st.header("⚙️ Configurações VisuMath")
     
-    # 1. Botão Restaurar Padrões
     if st.button("🔄 Restaurar Padrões", use_container_width=True):
         st.session_state["func_input"] = "x**2 - 2"
         st.session_state["a_input"] = 1.0
@@ -71,7 +64,7 @@ with st.sidebar:
         st.session_state["tol_input"] = 0.0001
         st.session_state["mode_iter"] = "Automático"
         st.session_state["manual_iter"] = 10
-        st.session_state["viz_mode"] = "Animação em Vídeo"
+        st.session_state["viz_mode"] = "Slider Interativo (Estilo Colab)"
         st.rerun()
 
     st.markdown("---")
@@ -145,11 +138,11 @@ with st.sidebar:
         
     viz_mode = st.radio(
         "Modo de Visualização:",
-        options=["Animação em Vídeo", "Slider Interativo Passo a Passo"],
+        options=["Slider Interativo (Estilo Colab)", "Animação em GIF"],
         key="viz_mode"
     )
     
-    if viz_mode == "Animação em Vídeo":
+    if viz_mode == "Animação em GIF":
         fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
 
     btn_calcular = st.button("🚀 CALCULAR BISSEÇÃO", type="primary", use_container_width=True)
@@ -167,25 +160,21 @@ if not btn_calcular and "calculated" not in st.session_state:
         ### 🎯 Objetivos
         - Visualizar dinamicamente a convergência do Método da Bisseção.
         - Analisar o comportamento do intervalo $[a, b]$ e do ponto médio $c$ a cada iteração.
-        - Explorar tabelas de convergência com o rigor acadêmico padrão.
+        - Explorar tabelas de convergência com rigor acadêmico.
         """)
     with col_info2:
         st.warning("""
         ### 💡 Orientações de Uso
         1. Selecione um **Exemplo Rápido** na barra lateral ou digite sua função.
-        2. Defina o intervalo $[a, b]$ inicial garantindo que $f(a) \cdot f(b) < 0$.
-        3. Ajuste a tolerância desejada $\varepsilon$ e escolha o modo de iteração.
-        4. Clique em **CALCULAR BISSEÇÃO** para gerar a análise gráfica completa.
+        2. Defina o intervalo $[a, b]$ inicial garantindo $f(a) \cdot f(b) < 0$.
+        3. Ajuste a tolerância e clique em **CALCULAR BISSEÇÃO**.
         """)
         
     st.markdown("---")
     with st.expander("📖 **Fundamentação Teórica & Origem do Método**", expanded=True):
         st.markdown("""
         #### O Teorema do Valor Intermediário (Teorema de Bolzano)
-        Se uma função real $f(x)$ for contínua em um intervalo fechado $[a, b]$ e $f(a) \cdot f(b) < 0$, então existe pelo menos um número real $c \in (a, b)$ tal que $f(c) = 0$. Em termos simples: se a função muda de sinal entre os extremos, ela obrigatoriamente cruza o eixo horizontal.
-
-        #### Origem da "Bisseção"
-        O termo **Bisseção** vem do latim (*bis* = dois, *sectio* = corte). Trata-se de um método numérico de busca por intervalo que divide sistematicamente o intervalo ativo ao meio a cada iteração ($c = \frac{a+b}{2}$), descartando a metade que não contém a raiz e mantendo a propriedade da troca de sinal.
+        Se uma função real $f(x)$ for contínua em $[a, b]$ e $f(a) \cdot f(b) < 0$, existe pelo menos um $c \in (a, b)$ tal que $f(c) = 0$.
         """)
 
 else:
@@ -196,35 +185,27 @@ else:
         fa_test = f(a_val)
         fb_test = f(b_val)
     except Exception as e:
-        st.error(f"❌ Erro ao interpretar a função $f(x)$. Verifique a sintaxe matemática. Detalhes: {e}")
+        st.error(f"❌ Erro ao interpretar a função $f(x)$. Detalhes: {e}")
         st.stop()
         
     if ("log" in func_str or "ln" in func_str) and (a_val <= 0 or b_val <= 0):
-        st.error("⚠️ **Alerta de Domínio:** A função logarítmica só é definida para valores estritamente positivos ($x > 0$). Ajuste o intervalo inicial $[a, b]$ para números maiores que zero.")
+        st.error("⚠️ **Alerta de Domínio:** A função logarítmica exige $x > 0$. Ajuste o intervalo inicial.")
         st.stop()
         
     if check_domain_issues(f, a_val, b_val):
-        st.error("⚠️ O intervalo selecionado contém valores fora do domínio válido da função ou descontinuidades.")
+        st.error("⚠️ O intervalo contém valores fora do domínio válido da função.")
         st.stop()
 
     if fa_test * fb_test >= 0:
-        st.error(f"""
-        ⚠️ **Violação do Teorema de Bolzano:** $f(a) \cdot f(b) \ge 0$.
-        - $f(a) = f({fmt(a_val)}) = {fmt(fa_test)}$
-        - $f(b) = f({fmt(b_val)}) = {fmt(fb_test)}$
-        
-        O Método da Bisseção exige que os sinais nas extremidades do intervalo sejam opostos ($f(a) \cdot f(b) < 0$). Ajuste o intervalo inicial.
-        """)
+        st.error(f"⚠️ **Violação de Bolzano:** $f(a) \cdot f(b) \ge 0$. Os sinais nas extremidades devem ser opostos.")
         st.stop()
 
+    # Execução do Algoritmo
     iterations_data = []
     a, b = a_val, b_val
     target_tol = tol_val
     max_steps = max_iter_user if mode_iter == "Manual" else 40
     
-    n_theoretical = int(np.ceil(np.log2(abs(b_val - a_val) / target_tol))) if target_tol > 0 else 0
-
-    stop_reason = ""
     for k in range(1, max_steps + 1):
         c = (a + b) / 2.0
         fa, fb, fc = f(a), f(b), f(c)
@@ -238,140 +219,137 @@ else:
         })
         
         if width < target_tol or abs(fc) < 1e-12:
-            stop_reason = "Tolerância atingida com sucesso."
             break
             
         if fa * fc < 0:
             b = c
         else:
             a = c
-    else:
-        stop_reason = "Número máximo de iterações atingido."
 
-    st.markdown(f"### 📊 Análise Gráfica Dinâmica: ${sp.latex(sympy_expr)}$")
+    # ---------------------------------------------------------
+    # VISUALIZAÇÃO GRÁFICA AVANÇADA (PADRÃO COLAB)
+    # ---------------------------------------------------------
+    st.markdown(f"### 📊 Análise Gráfica Dinâmica (Estilo Colab): ${sp.latex(sympy_expr)}$")
     
-    def generate_frame(idx, ax):
-        ax.clear()
+    def render_colab_style_plot(idx):
+        fig, ax = plt.subplots(figsize=(10, 5))
         data = iterations_data[idx]
         ca, cb, cc = data["a"], data["b"], data["c"]
         cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
         
-        margin = max(abs(cb - ca) * 0.8, 0.05)
-        x_min, x_max = ca - margin, cb + margin
-        x_vals = np.linspace(x_min, x_max, 400)
+        # Domínio adaptativo suave ao redor do intervalo ativo
+        span = max(abs(cb - ca), 0.1)
+        x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 500)
         y_vals = f(x_vals)
         
+        # Curva principal
         ax.plot(x_vals, y_vals, color="#1E3A8A", lw=2.5, label="$f(x)$")
-        ax.axhline(0, color="black", lw=1, ls="--")
+        ax.axhline(0, color="black", lw=1.2, ls="--", alpha=0.7)
         
-        ax.axvspan(ca, cb, color="#E0F2FE", alpha=0.5, label="Intervalo Ativo $[a, b]$")
+        # Preenchimento translúcido da área de busca ativa [a, b]
+        ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo de Busca $[a, b]$")
         
-        ax.axvline(ca, color="#DC2626", ls=":", lw=2, label=f"a = {fmt(ca, 4)}")
-        ax.axvline(cb, color="#9333EA", ls=":", lw=2, label=f"b = {fmt(cb, 4)}")
-        ax.axvline(cc, color="#2563EB", ls="--", lw=2, label=f"c = {fmt(cc, 4)}")
+        # Linhas verticais limpas
+        ax.axvline(ca, color="#EF4444", ls=":", lw=1.8, label=f"a = {fmt(ca, 4)}")
+        ax.axvline(cb, color="#8B5CF6", ls=":", lw=1.8, label=f"b = {fmt(cb, 4)}")
+        ax.axvline(cc, color="#0EA5E9", ls="--", lw=2, label=f"c (Ponto Médio) = {fmt(cc, 4)}")
         
-        ax.plot(ca, cfa, 'ro', markersize=7)
-        ax.plot(cb, cfb, 'mo', markersize=7)
-        ax.plot(cc, cfc, 'bo', markersize=8)
+        # Pontos exatos sobre a curva
+        ax.plot(ca, cfa, 'o', color="#EF4444", markersize=8)
+        ax.plot(cb, cfb, 'o', color="#8B5CF6", markersize=8)
+        ax.plot(cc, cfc, 'o', color="#0EA5E9", markersize=10, zorder=5)
         
-        ax.text(ca, cfa, f"  f(a) {'+' if cfa>0 else '-'}", color="#DC2626", fontweight="bold")
-        ax.text(cb, cfb, f"  f(b) {'+' if cfb>0 else '-'}", color="#9333EA", fontweight="bold")
-        ax.text(cc, cfc, f"  f(c) {'+' if cfc>0 else '-'}", color="#2563EB", fontweight="bold")
-        
-        hud_text = (
-            f"Iteração: {data['k']}\n"
-            f"a = {fmt(ca, 5)}  |  b = {fmt(cb, 5)}\n"
-            f"c = (a+b)/2 = {fmt(cc, 5)}\n"
-            f"f(c) = {fmt(cfc, 6)}\n"
-            f"Tamanho (b-a) = {fmt(data['width'], 6)}"
+        # Anotações de texto no gráfico
+        ax.annotate(f"f(a) {'(+)' if cfa>0 else '(-)'}", (ca, cfa), textcoords="offset points", xytext=(-15, 10), ha='center', fontweight='bold', color="#EF4444")
+        ax.annotate(f"f(b) {'(+)' if cfb>0 else '(-)'}", (cb, cfb), textcoords="offset points", xytext=(15, 10), ha='center', fontweight='bold', color="#8B5CF6")
+        ax.annotate(f"f(c) {'(+)' if cfc>0 else '(-)'}", (cc, cfc), textcoords="offset points", xytext=(0, 15), ha='center', fontweight='bold', color="#0EA5E9")
+
+        # HUD flutuante interno estilo painel de laboratório
+        hud = (
+            f"Passo: {data['k']} | Intervalo: [{fmt(ca, 4)}, {fmt(cb, 4)}]\n"
+            f"c = {fmt(cc, 5)} | f(c) = {fmt(cfc, 6)}\n"
+            f"Amplitude (b-a) = {fmt(data['width'], 6)}"
         )
-        ax.text(0.02, 0.95, hud_text, transform=ax.transAxes, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.85, edgecolor='#CBD5E1'),
-                fontsize=9, fontfamily='monospace')
-                
-        ax.set_title(f"Método da Bisseção - Passo {data['k']} de {len(iterations_data)}", fontsize=11, fontweight='bold')
-        ax.legend(loc="upper right", fontsize=8)
-        ax.grid(True, linestyle=":", alpha=0.6)
+        ax.text(0.03, 0.93, hud, transform=ax.transAxes, fontsize=9, fontfamily='monospace',
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#94A3B8', alpha=0.9))
 
-    fig, ax = plt.subplots(figsize=(9, 4.5))
+        ax.set_title(f"Iteração {data['k']} — Convergência do Método da Bisseção", fontsize=12, fontweight='bold', pad=12)
+        ax.legend(loc="upper right", fontsize=8.5, framealpha=0.9)
+        ax.grid(True, linestyle=":", alpha=0.5)
+        return fig
 
-    if viz_mode == "Animação em Vídeo":
-        with st.spinner("Renderizando animação interativa..."):
-            anim = animation.FuncAnimation(
-                fig, 
-                generate_frame, 
-                frames=len(iterations_data), 
-                fargs=(ax,), 
-                interval=int(1000 // fps_val)
-            )
-            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmpfile:
-                anim.save(tmpfile.name, writer='pillow', fps=fps_val)
-                st.image(tmpfile.name)
-            plt.close(fig)
+    if viz_mode == "Slider Interativo (Estilo Colab)":
+        step_sel = st.slider("🔍 Deslize para acompanhar a evolução passo a passo:", 1, len(iterations_data), len(iterations_data))
+        fig_plot = render_colab_style_plot(step_sel - 1)
+        st.pyplot(fig_plot)
+        plt.close(fig_plot)
     else:
-        step_selected = st.slider("Selecione a Iteração:", 1, len(iterations_data), len(iterations_data))
-        generate_frame(step_selected - 1, ax)
-        st.pyplot(fig)
-        plt.close(fig)
+        with st.spinner("Gerando animação GIF..."):
+            fig, ax = plt.subplots(figsize=(10, 5))
+            def update(i):
+                ax.clear()
+                # Reutiliza a lógica de frame para o gif
+                data = iterations_data[i]
+                ca, cb, cc = data["a"], data["b"], data["c"]
+                cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
+                span = max(abs(cb - ca), 0.1)
+                x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 400)
+                ax.plot(x_vals, f(x_vals), color="#1E3A8A", lw=2)
+                ax.axhline(0, color="black", ls="--")
+                ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15)
+                ax.axvline(ca, color="#EF4444", ls=":")
+                ax.axvline(cb, color="#8B5CF6", ls=":")
+                ax.axvline(cc, color="#0EA5E9", ls="--")
+                ax.plot(cc, cfc, 'bo', markersize=8)
+                ax.set_title(f"Iteração {data['k']}")
+                ax.grid(True, alpha=0.5)
 
+            anim = animation.FuncAnimation(fig, update, frames=len(iterations_data), interval=1000//fps_val)
+            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
+                anim.save(tmp.name, writer='pillow', fps=fps_val)
+                st.image(tmp.name)
+            plt.close(fig)
+
+    # ---------------------------------------------------------
+    # TABELA DE BISSEÇÕES ACUMULADA (CORRIGIDA E SEM BUGS)
+    # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📋 Tabela de Bisseções Acumulada")
     
-    table_html = f"""
-    <table style="width:100%; border-collapse: collapse; text-align: center; font-size: 0.9rem;">
-        <thead>
-            <tr style="background-color: #1E3A8A; color: white;">
-                <th style="padding: 8px;">k</th>
-                <th style="padding: 8px;">a</th>
-                <th style="padding: 8px;">b</th>
-                <th style="padding: 8px; background-color: #0284C7;">c = (a+b)/2</th>
-                <th style="padding: 8px;">f(a)</th>
-                <th style="padding: 8px;">f(b)</th>
-                <th style="padding: 8px; background-color: #0284C7;">f(c)</th>
-                <th style="padding: 8px;">|b - a|</th>
-                <th style="padding: 8px;">|b - a| &lt; ε ({fmt(target_tol)})</th>
-                <th style="padding: 8px;">Substituição</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-    
+    table_rows = []
     for row in iterations_data:
         is_tol_met = row["width"] < target_tol
-        tol_cmp = f"{fmt(row['width'])} &lt; {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} &gt; {fmt(target_tol)}"
-        
-        fa_color = "highlight-green" if row["fa"] > 0 else "highlight-red"
-        fb_color = "highlight-green" if row["fb"] > 0 else "highlight-red"
-        fc_color = "highlight-green" if row["fc"] > 0 else "highlight-red"
-        
-        table_html += f"""
-        <tr style="border-bottom: 1px solid #E2E8F0;">
-            <td style="padding: 6px; font-weight: bold;">{row['k']}</td>
-            <td style="padding: 6px;">{fmt(row['a'])}</td>
-            <td style="padding: 6px;">{fmt(row['b'])}</td>
-            <td style="padding: 6px;" class="highlight-blue">{fmt(row['c'])}</td>
-            <td style="padding: 6px;" class="{fa_color}">{fmt(row['fa'])}</td>
-            <td style="padding: 6px;" class="{fb_color}">{fmt(row['fb'])}</td>
-            <td style="padding: 6px;" class="{fc_color}">{fmt(row['fc'])}</td>
-            <td style="padding: 6px;">{fmt(row['width'])}</td>
-            <td style="padding: 6px;">{tol_cmp}</td>
-            <td style="padding: 6px; font-style: italic;">{row['subst']}</td>
-        </tr>
-        """
-    table_html += "</tbody></table>"
-    st.markdown(table_html, unsafe_allow_html=True)
+        comp_str = f"{fmt(row['width'])} < {fmt(target_tol)}" if is_tol_met else f"{fmt(row['width'])} > {fmt(target_tol)}"
+        table_rows.append({
+            "k": row["k"],
+            "a": fmt(row["a"]),
+            "b": fmt(row["b"]),
+            "c = (a+b)/2": fmt(row["c"]),
+            "f(a)": fmt(row["fa"]),
+            "f(b)": fmt(row["fb"]),
+            "f(c)": fmt(row["fc"]),
+            "|b - a|": fmt(row["width"]),
+            "Critério ε": comp_str,
+            "Substituição": row["subst"]
+        })
+    
+    df_results = pd.DataFrame(table_rows)
+    st.dataframe(df_results, use_container_width=True, hide_index=True)
 
+    # Indicador de Redução
     initial_width = abs(b_val - a_val)
     final_width = iterations_data[-1]["width"]
     reduction_pct = (1.0 - (final_width / initial_width)) * 100.0
     
-    st.markdown("<br>", unsafe_allow_html=True)
     st.metric(
         label="📉 Porcentagem de Redução do Intervalo Acumulada",
         value=f"{reduction_pct:.4f}%".replace(".", ","),
         delta=f"De {fmt(initial_width, 4)} para {fmt(final_width, 6)}"
     )
 
+    # ---------------------------------------------------------
+    # RELATÓRIO & CONCLUSÃO FORMAL (LIMPO E SEM POLUIÇÃO)
+    # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📝 Relatório & Conclusão Formal")
     
@@ -382,25 +360,18 @@ else:
     col_rel1, col_rel2 = st.columns(2)
     with col_rel1:
         st.markdown(f"""
-        **Status da Tolerância (ε):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}\n
-        **Iterações Executadas:** {total_steps} passo(s)\n
-        **Teto / Estimativa de Iterações:** 
-        - Iterações configuradas: **{max_steps}**
-        - Iterações estimadas (fórmula teórico-analítica): **{n_theoretical}**
+        - **Status da Tolerância ($\varepsilon$):** {'✅ Atingida' if final_width < target_tol else '❌ Não Atingida'}
+        - **Iterações Executadas:** **{total_steps}**
         """)
-    
     with col_rel2:
         st.markdown(f"""
-        **Raiz Aproximada ($c$):** `{fmt(final_c, 7)}`\n
-        **Valor da Função no Ponto Exato $f(c)$:** `{fmt(final_fc, 8)}`\n
-        **Amplitude Final do Intervalo:** `{fmt(final_width, 8)}`
+        - **Raiz Aproximada ($c$):** `{fmt(final_c, 7)}`
+        - **Erro Residual $f(c)$:** `{fmt(final_fc, 8)}`
+        - **Amplitude Final:** `{fmt(final_width, 8)}`
         """)
         
     if total_steps >= 20:
-        st.warning("⚠️ **Recomendação Científica:** O algoritmo ultrapassou 20 iterações. Devido à convergência linear do Método da Bisseção, recomenda-se considerar métodos de ordem superior (como Newton-Raphson ou Secante) para maior eficiência computacional.")
-
-    if mode_iter == "Manual" and final_width >= target_tol:
-        st.info(f"💡 **Nota Pedagógica:** Você limitou a execução a **{max_steps} iterações**, mas eram necessárias teoricamente **{n_theoretical} iterações** para satisfazer a tolerância de {fmt(target_tol)}. Por isso, a tolerância não foi atingida.")
+        st.warning("⚠️ **Nota:** O algoritmo ultrapassou 20 iterações, indicando que métodos abertos poderiam convergir com maior velocidade.")
 
     st.success(f"""
     **Conclusão Formal:**
