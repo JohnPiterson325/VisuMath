@@ -14,7 +14,6 @@ st.set_page_config(
     page_icon="📐",
     layout="wide"
 )
-
 # Estilização CSS customizada para cabeçalhos e tabelas
 st.markdown("""
 <style>
@@ -25,8 +24,7 @@ st.markdown("""
     .highlight-green { background-color: #DCFCE7; color: #166534; font-weight: bold; }
     .highlight-red { background-color: #FEE2E2; color: #991B1B; font-weight: bold; }
 </style>
-""", unsafe_allow_html=unsafe_allow_scope=True)
-
+""", unsafe_allow_html=True)
 # ---------------------------------------------------------
 # FUNÇÕES AUXILIARES DE FORMATAÇÃO E CÁLCULO
 # ---------------------------------------------------------
