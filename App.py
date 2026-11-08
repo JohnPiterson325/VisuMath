@@ -316,12 +316,12 @@ else:
 
     fig, ax = plt.subplots(figsize=(9, 4.5))
 
-    if viz_mode == "Animação em Vídeo":
-        with st.spinner("Renderizando vídeo de alta definição..."):
+   if viz_mode == "Animação em Vídeo":
+        with st.spinner("Renderizando animação interativa..."):
             anim = animation.FuncAnimation(fig, generate_frame, frames=len(iterations_data), fargs=(ax,), interval=1000//fps_val)
-            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmpfile:
-                anim.save(tmpfile.name, writer='ffmpeg', fps=fps_val)
-                st.video(tmpfile.name)
+            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmpfile:
+                anim.save(tmpfile.name, writer='pillow', fps=fps_val)
+                st.image(tmpfile.name)
             plt.close(fig)
     else:
         step_selected = st.slider("Selecione a Iteração:", 1, len(iterations_data), len(iterations_data))
