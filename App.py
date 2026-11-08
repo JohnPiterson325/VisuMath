@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sympy as sp
-import tempfile
 import pandas as pd
+import streamlit.components.v1 as components
 import os
 
 # ---------------------------------------------------------
@@ -69,7 +69,7 @@ with st.sidebar:
         st.session_state["tol_input"] = 0.0001
         st.session_state["mode_iter"] = "Automático"
         st.session_state["manual_iter"] = 10
-        st.session_state["viz_mode"] = "Slider Interativo (Estilo Colab)"
+        st.session_state["viz_mode"] = "Animação (Player Estilo Colab)"
         st.rerun()
 
     st.markdown("---")
@@ -143,11 +143,11 @@ with st.sidebar:
         
     viz_mode = st.radio(
         "Modo de Visualização:",
-        options=["Slider Interativo (Estilo Colab)", "Animação em GIF"],
+        options=["Animação (Player Estilo Colab)", "Slider Manual"],
         key="viz_mode"
     )
     
-    if viz_mode == "Animação em GIF":
+    if viz_mode == "Animação (Player Estilo Colab)":
         fps_val = st.slider("Velocidade (FPS):", min_value=1, max_value=5, value=2)
     else:
         fps_val = 2
@@ -233,30 +233,35 @@ else:
             a = c
 
     # ---------------------------------------------------------
-    # MOTOR DE RENDERIZAÇÃO GRÁFICA
+    # MOTOR DE RENDERIZAÇÃO MATPLOTLIB (ESTILO COLAB NATIVO)
     # ---------------------------------------------------------
-    st.markdown(f"### 📊 Análise Gráfica Dinâmica (Estilo Colab): ${sp.latex(sympy_expr)}$")
+    st.markdown(f"### 📊 Análise Gráfica (Player Estilo Colab): ${sp.latex(sympy_expr)}$")
     
-    def generate_frame(idx):
-        fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
-        ax.set_facecolor('white')
-        
+    fig, ax = plt.subplots(figsize=(9, 4.5), facecolor='white')
+    ax.set_facecolor('white')
+
+    def init():
+        ax.clear()
+        return []
+
+    def update_frame(idx):
+        ax.clear()
         data = iterations_data[idx]
         ca, cb, cc = data["a"], data["b"], data["c"]
         cfa, cfb, cfc = data["fa"], data["fb"], data["fc"]
         
         span = max(abs(cb - ca), 0.1)
-        x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 500)
+        x_vals = np.linspace(ca - span * 1.5, cb + span * 1.5, 400)
         y_vals = f(x_vals)
         
         ax.plot(x_vals, y_vals, color="#1E3A8A", lw=2.5, label="$f(x)$")
         ax.axhline(0, color="black", lw=1.2, ls="--", alpha=0.7)
         
-        ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo de Busca Ativo $[a, b]$")
+        ax.axvspan(ca, cb, color="#3B82F6", alpha=0.15, label="Intervalo Ativo $[a, b]$")
         
         ax.axvline(ca, color="#EF4444", ls=":", lw=1.8, label=f"a = {fmt(ca, 4)}")
         ax.axvline(cb, color="#8B5CF6", ls=":", lw=1.8, label=f"b = {fmt(cb, 4)}")
-        ax.axvline(cc, color="#0EA5E9", ls="--", lw=2, label=f"c (Ponto Médio) = {fmt(cc, 4)}")
+        ax.axvline(cc, color="#0EA5E9", ls="--", lw=2, label=f"c = {fmt(cc, 4)}")
         
         col_fa = 'green' if cfa > 0 else 'red'
         col_fb = 'green' if cfb > 0 else 'red'
@@ -282,25 +287,23 @@ else:
         ax.text(0.03, 0.93, hud, transform=ax.transAxes, fontsize=9, fontfamily='monospace',
                 bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor='#94A3B8', alpha=0.9))
 
-        ax.set_title(f"Iteração {data['k']} — Convergência do Método da Bisseção", fontsize=12, fontweight='bold', pad=12)
-        ax.legend(loc="upper right", fontsize=8.5, framealpha=0.9)
+        ax.set_title(f"Iteração {data['k']} de {len(iterations_data)} — Método da Bisseção", fontsize=11, fontweight='bold', pad=10)
+        ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
         ax.grid(True, linestyle=":", alpha=0.5)
-        return fig
+        return ax,
 
-    if viz_mode == "Slider Interativo (Estilo Colab)":
-        step_sel = st.slider("🔍 Deslize para acompanhar a evolução passo a passo:", 1, len(iterations_data), len(iterations_data))
-        fig_plot = generate_frame(step_sel - 1)
-        st.pyplot(fig_plot)
-        plt.close(fig_plot)
+    anim = animation.FuncAnimation(fig, update_frame, init_func=init, frames=len(iterations_data), interval=int(1000/fps_val), blit=False)
+
+    if viz_mode == "Animação (Player Estilo Colab)":
+        # Converte a animação diretamente para o player HTML idêntico ao do Colab!
+        html_anim = anim.to_jshtml()
+        components.html(html_anim, height=520, scrolling=True)
+        plt.close(fig)
     else:
-        with st.spinner("Gerando animação detalhada..."):
-            fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
-            anim = animation.FuncAnimation(fig, lambda i: generate_frame(i), frames=len(iterations_data), interval=1000//fps_val)
-            with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
-                # Chamada limpa do anim.save sem argumentos inválidos para o pillow
-                anim.save(tmp.name, writer='pillow', fps=fps_val)
-                st.image(tmp.name)
-            plt.close(fig)
+        step_sel = st.slider("🔍 Deslize para acompanhar a evolução passo a passo:", 1, len(iterations_data), len(iterations_data))
+        update_frame(step_sel - 1)
+        st.pyplot(fig)
+        plt.close(fig)
 
     # ---------------------------------------------------------
     # TABELA DE BISSEÇÕES ACUMULADA (PANDAS STYLER)
