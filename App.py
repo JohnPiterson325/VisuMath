@@ -233,12 +233,11 @@ else:
             a = c
 
     # ---------------------------------------------------------
-    # MOTOR DE RENDERIZAÇÃO GRÁFICA (COM FUNDO BRANCO SÓLIDO)
+    # MOTOR DE RENDERIZAÇÃO GRÁFICA
     # ---------------------------------------------------------
     st.markdown(f"### 📊 Análise Gráfica Dinâmica (Estilo Colab): ${sp.latex(sympy_expr)}$")
     
     def generate_frame(idx):
-        # Força o fundo branco sólido para evitar inversões ou transparências indesejadas
         fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
         ax.set_facecolor('white')
         
@@ -298,12 +297,13 @@ else:
             fig, ax = plt.subplots(figsize=(10, 5), facecolor='white')
             anim = animation.FuncAnimation(fig, lambda i: generate_frame(i), frames=len(iterations_data), interval=1000//fps_val)
             with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
-                anim.save(tmp.name, writer='pillow', fps=fps_val, facecolor='white', edgecolor='none')
+                # Chamada limpa do anim.save sem argumentos inválidos para o pillow
+                anim.save(tmp.name, writer='pillow', fps=fps_val)
                 st.image(tmp.name)
             plt.close(fig)
 
     # ---------------------------------------------------------
-    # TABELA DE BISSEÇÕES ACUMULADA (COM PANDAS STYLER - SEM BUGS)
+    # TABELA DE BISSEÇÕES ACUMULADA (PANDAS STYLER)
     # ---------------------------------------------------------
     st.markdown("---")
     st.markdown("### 📋 Tabela de Bisseções Acumulada")
@@ -328,7 +328,6 @@ else:
     
     df_results = pd.DataFrame(table_rows)
 
-    # Função para colorir os sinais de forma nativa e segura no Pandas Styler
     def color_signs(val):
         if val == "(+)":
             return 'background-color: #DCFCE7; color: #166534; font-weight: bold; text-align: center;'
